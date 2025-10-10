@@ -1,0 +1,6 @@
+@AutoFixtureDemo_HostAddress = http://localhost:5001
+
+GET {{AutoFixtureDemo_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
