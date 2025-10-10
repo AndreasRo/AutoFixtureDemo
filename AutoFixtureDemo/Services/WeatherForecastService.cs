@@ -1,3 +1,4 @@
+using AutoFixtureDemo.DomainObjects;
 
 namespace AutoFixtureDemo.Services
 {

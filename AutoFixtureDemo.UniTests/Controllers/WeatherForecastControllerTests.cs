@@ -2,7 +2,7 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using AutoFixtureDemo.Controllers;
 using AutoFixtureDemo.Services;
-using AutoFixtureDemo;
+using AutoFixtureDemo.DomainObjects;
 
 public class WeatherForecastControllerTests
 {
