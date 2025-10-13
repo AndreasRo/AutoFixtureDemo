@@ -1,3 +1,4 @@
+using AutoFixture;
 using AutoFixtureDemo.Controllers;
 using AutoFixtureDemo.Controllers.DTO;
 using AutoFixtureDemo.DomainObjects;
@@ -18,38 +19,33 @@ public class WeatherForecastControllerTests
     public void Get_ReturnsForecastsFromService()
     {
         // Arrange
-        var location = new Location
-        {
-            City = new Text("SomeCity"),
-            Country = new Text("SomeCountry"),
-            Forecasts =
-            [
-                new() { Date = Today(), TemperatureC = new Celsius(24), Summary = WeatherSummary.Balmy },
-                new() { Date = Today().AddDays(1), TemperatureC = new Celsius(20), Summary = WeatherSummary.Mild },
-                new() { Date = Today().AddDays(2), TemperatureC = new Celsius(40), Summary = WeatherSummary.Sweltering },
-                new() { Date = Today().AddDays(3), TemperatureC = new Celsius(7), Summary = WeatherSummary.Cool },
-                new() { Date = Today().AddDays(4), TemperatureC = new Celsius(6), Summary = WeatherSummary.Cool },
-                new() { Date = Today().AddDays(5), TemperatureC = new Celsius(-12), Summary = WeatherSummary.Freezing },
-            ]
-        };
+        var fixture = new Fixture();
 
-    _mockService.Setup(s => s.GetForecastsForLocation(It.IsAny<string?>())).Returns(location);
+        var forecasts = fixture.Build<WeatherForecast>()
+            .CreateMany(5)
+            .ToList();
 
-    // create mapper
-    var mapperConfig = new AutoMapper.MapperConfiguration(cfg => cfg.AddProfile<Mapping.MappingProfile>(), new LoggerFactory());
-    var mapper = mapperConfig.CreateMapper();
+        var location = fixture.Build<Location>()
+            .With(l => l.Forecasts, forecasts)
+            .Create();
 
-    var controller = new WeatherForecastController(_mockService.Object, mapper);
+        _mockService.Setup(s => s.GetForecastsForLocation(location.City.Value)).Returns(location);
 
-    // Act
-    var result = controller.Get("some-location");
+        // create mapper
+        var mapperConfig = new AutoMapper.MapperConfiguration(cfg => cfg.AddProfile<Mapping.MappingProfile>(), new LoggerFactory());
+        var mapper = mapperConfig.CreateMapper();
 
-    // Assert
-    var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var dto = Assert.IsType<LocationDto>(ok.Value);
+        var controller = new WeatherForecastController(_mockService.Object, mapper);
 
-    Assert.Equal(location.City.Value, dto.City);
-    Assert.Equal(location.Country.Value, dto.Country);
-    Assert.Equal(location.Forecasts.Count, dto.Forecasts.Count);
+        // Act
+        var result = controller.Get(location.City.Value);
+
+        // Assert
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<AutoFixtureDemo.Controllers.DTO.LocationDto>(ok.Value);
+
+        Assert.Equal(location.City.Value, dto.City);
+        Assert.Equal(location.Country.Value, dto.Country);
+        Assert.Equal(location.Forecasts.Count, dto.Forecasts.Count);
     }
 }

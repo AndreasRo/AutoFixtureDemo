@@ -28,8 +28,6 @@ public class WeatherForecastServiceTests
         // Arrange
         var fixture = new Fixture();
         
-        fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
-
         var forecasts = fixture.Build<WeatherForecastEntity>()
             .Without(f => f.Location)
             .CreateMany(5)
@@ -50,8 +48,8 @@ public class WeatherForecastServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("TestCity", result.City.Value);
-        Assert.Equal("TestCountry", result.Country.Value);
+        Assert.Equal(locationEntity.City, result.City.Value);
+        Assert.Equal(locationEntity.Country, result.Country.Value);
         Assert.Equal(locationEntity.Forecasts.Count, result.Forecasts.Count);
         Assert.Contains(result.Forecasts, f => locationEntity.Forecasts.Any(e => e.Date == f.Date && e.TemperatureC == f.TemperatureC.Value && e.Summary == f.Summary));
     }
