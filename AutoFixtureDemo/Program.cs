@@ -1,10 +1,13 @@
+using AutoFixtureDemo.Database;
 using AutoFixtureDemo.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddSingleton<IWeatherForecastService, WeatherForecastService>(); // Register the service
+builder.Services.AddSingleton<IWeatherForecastService, WeatherForecastService>();
+builder.Services.AddSingleton<ILocationRepository, LocationRepository>();
+
 // Add Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

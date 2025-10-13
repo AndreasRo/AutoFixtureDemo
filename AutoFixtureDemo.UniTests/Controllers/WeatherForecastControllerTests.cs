@@ -21,8 +21,8 @@ public class WeatherForecastControllerTests
         // Arrange
         var location = new Location
         {
-            City = "SomeCity",
-            Country = "SomeCountry",
+            City = new Text("SomeCity"),
+            Country = new Text("SomeCountry"),
             Forecasts = new List<WeatherForecast>
             {
                 new() { Date = DateOnly.FromDateTime(DateTime.Now), TemperatureC = new Celsius(24), Summary = WeatherSummary.Balmy },
@@ -49,8 +49,8 @@ public class WeatherForecastControllerTests
     var ok = Assert.IsType<OkObjectResult>(result.Result);
     var dto = Assert.IsType<AutoFixtureDemo.Controllers.DTO.LocationDto>(ok.Value);
 
-    Assert.Equal(location.City, dto.City);
-    Assert.Equal(location.Country, dto.Country);
+    Assert.Equal(location.City.Value, dto.City);
+    Assert.Equal(location.Country.Value, dto.Country);
     Assert.Equal(location.Forecasts.Count, dto.Forecasts.Count);
     }
 }
