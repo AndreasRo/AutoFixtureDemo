@@ -23,14 +23,8 @@ public class WeatherForecastControllerTests
         var fixture = new Fixture();
         fixture.Customize(new DefaultTestCustomization());
 
-        var forecasts = fixture.Build<WeatherForecast>()
-            .CreateMany(5)
-            .ToList();
+        var location = fixture.Create<Location>();
         
-        var location = fixture.Build<Location>()
-            .With(l => l.Forecasts, forecasts)
-            .Create();
-
         _mockService.Setup(s => s.GetForecastsForLocation(location.City.Value)).Returns(location);
 
         // create mapper

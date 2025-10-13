@@ -24,4 +24,23 @@ namespace AutoFixtureDemo.UnitTests.AutoFixtureCustomizations
             fixture.Customize<WeatherForecastEntity>(c => c.Without(w => w.Location));
         }
     }
+
+    public class EntityCustomization : ICustomization
+    {
+        public void Customize(IFixture fixture)
+        {
+            fixture.Customize(new DefaultTestCustomization());
+
+            fixture.Customize<WeatherForecastEntity>(c => c
+                .Without(w => w.Location)
+                .With(f => f.TemperatureC, () => fixture.Create<Celsius>().Value)
+            );
+
+            fixture.Customize<LocationEntity>(c => c
+                    .With(l => l.Forecasts, () => [.. fixture.CreateMany<WeatherForecastEntity>(5)])
+                    .With(f => f.City, () => fixture.Create<Text>().Value)
+                    .With(f => f.Country, () => fixture.Create<Text>().Value)
+            );
+        }
+    }
 }

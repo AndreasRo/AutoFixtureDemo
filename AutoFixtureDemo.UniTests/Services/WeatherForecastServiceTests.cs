@@ -5,7 +5,6 @@ using AutoFixtureDemo.Database.Entities;
 using AutoFixtureDemo.Mapping;
 using AutoMapper;
 using AutoFixture;
-using AutoFixtureDemo.DomainObjects;
 using AutoFixtureDemo.UnitTests.AutoFixtureCustomizations;
 using Microsoft.Extensions.Logging;
 
@@ -29,21 +28,10 @@ public class WeatherForecastServiceTests
     {
         // Arrange
         var fixture = new Fixture();
-        fixture.Customize(new DefaultTestCustomization());
+        fixture.Customize(new EntityCustomization());
 
-        var forecasts = fixture.Build<WeatherForecastEntity>()
-            .Without(f => f.Location)
-            .With(f => f.TemperatureC, () => fixture.Create<Celsius>().Value)
-            .CreateMany(5)
-            .ToList();
-
-        var locationEntity = fixture.Build<LocationEntity>()
-            .With(l => l.Forecasts, forecasts)
-            .With(f => f.City, () => fixture.Create<Text>().Value)
-            .With(f => f.Country, () => fixture.Create<Text>().Value)
-            .Create();
-
-        forecasts.ForEach(f => f.Location = locationEntity);
+        var locationEntity = fixture.Create<LocationEntity>();
+        locationEntity.Forecasts.ForEach(f => f.Location = locationEntity);
 
         _mockRepo.Setup(r => r.GetLocationByName(It.IsAny<string>())).Returns(locationEntity);
 
