@@ -5,11 +5,14 @@ namespace AutoFixtureDemo.DomainObjects
         public int Value { get; }
 
         public const int AbsoluteZero = -273;
+        public const int MaxValue = 200;
 
         public Celsius(int value)
         {
             if (value < AbsoluteZero)
                 throw new ArgumentOutOfRangeException(nameof(value), $"Temperature cannot be below {AbsoluteZero} °C");
+            if (value > MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(value), $"Temperature cannot be over {MaxValue} °C, that is extremely hot!");
             Value = value;
         }
 

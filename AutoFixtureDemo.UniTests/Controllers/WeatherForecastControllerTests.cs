@@ -3,6 +3,7 @@ using AutoFixtureDemo.Controllers;
 using AutoFixtureDemo.Controllers.DTO;
 using AutoFixtureDemo.DomainObjects;
 using AutoFixtureDemo.Services;
+using AutoFixtureDemo.UnitTests.AutoFixtureCustomizations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -20,8 +21,7 @@ public class WeatherForecastControllerTests
     {
         // Arrange
         var fixture = new Fixture();
-        fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
-        fixture.Register(() => new Text($"Text {Guid.NewGuid():N}"));
+        fixture.Customize(new DefaultTestCustomization());
 
         var forecasts = fixture.Build<WeatherForecast>()
             .CreateMany(5)

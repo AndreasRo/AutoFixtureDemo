@@ -1,12 +1,13 @@
+using Moq;
+using AutoFixtureDemo.Services;
 using AutoFixtureDemo.Database;
 using AutoFixtureDemo.Database.Entities;
 using AutoFixtureDemo.Mapping;
-using AutoFixtureDemo.Services;
 using AutoMapper;
 using AutoFixture;
 using AutoFixtureDemo.DomainObjects;
+using AutoFixtureDemo.UnitTests.AutoFixtureCustomizations;
 using Microsoft.Extensions.Logging;
-using Moq;
 
 namespace AutoFixtureDemo.UnitTests.Services;
 
@@ -28,18 +29,18 @@ public class WeatherForecastServiceTests
     {
         // Arrange
         var fixture = new Fixture();
-        fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
-        fixture.Register(() => new Text($"Text {Guid.NewGuid():N}"));
+        fixture.Customize(new DefaultTestCustomization());
 
         var forecasts = fixture.Build<WeatherForecastEntity>()
             .Without(f => f.Location)
+            .With(f => f.TemperatureC, () => fixture.Create<Celsius>().Value)
             .CreateMany(5)
             .ToList();
 
         var locationEntity = fixture.Build<LocationEntity>()
-            .With(l => l.City, "TestCity")
-            .With(l => l.Country, "TestCountry")
             .With(l => l.Forecasts, forecasts)
+            .With(f => f.City, () => fixture.Create<Text>().Value)
+            .With(f => f.Country, () => fixture.Create<Text>().Value)
             .Create();
 
         forecasts.ForEach(f => f.Location = locationEntity);
