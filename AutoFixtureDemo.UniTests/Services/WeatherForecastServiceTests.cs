@@ -1,9 +1,9 @@
 using AutoFixtureDemo.Database;
 using AutoFixtureDemo.Database.Entities;
-using AutoFixtureDemo.DomainObjects;
 using AutoFixtureDemo.Mapping;
 using AutoFixtureDemo.Services;
 using AutoMapper;
+using AutoFixture;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -26,30 +26,34 @@ public class WeatherForecastServiceTests
     public void GetForecastsForLocation_ReturnsMappedLocation_WhenRepositoryReturnsEntity()
     {
         // Arrange
-        var summaries = Enum.GetValues<WeatherSummary>();
-        var entity = new LocationEntity
-        {
-            City = "TestCity",
-            Country = "TestCountry",
-            Forecasts = [.. Enumerable.Range(1, 5).Select(index => new WeatherForecastEntity
-            {
-                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = summaries[Random.Shared.Next(summaries.Length)]
-            })]
-        };
+        var fixture = new Fixture();
+        
+        fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
 
-        _mockRepo.Setup(r => r.GetLocationByName(It.IsAny<string>())).Returns(entity);
+        var forecasts = fixture.Build<WeatherForecastEntity>()
+            .Without(f => f.Location)
+            .CreateMany(5)
+            .ToList();
+
+        var locationEntity = fixture.Build<LocationEntity>()
+            .With(l => l.City, "TestCity")
+            .With(l => l.Country, "TestCountry")
+            .With(l => l.Forecasts, forecasts)
+            .Create();
+
+        forecasts.ForEach(f => f.Location = locationEntity);
+
+        _mockRepo.Setup(r => r.GetLocationByName(It.IsAny<string>())).Returns(locationEntity);
 
         // Act
-        var result = _service.GetForecastsForLocation("TestCity");
+        var result = _service.GetForecastsForLocation(locationEntity.City);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("TestCity", result.City.Value);
         Assert.Equal("TestCountry", result.Country.Value);
-        Assert.Equal(entity.Forecasts.Count, result.Forecasts.Count);
-        Assert.Contains(result.Forecasts, f => entity.Forecasts.Any(e => e.Date == f.Date && e.TemperatureC == f.TemperatureC.Value && e.Summary == f.Summary));
+        Assert.Equal(locationEntity.Forecasts.Count, result.Forecasts.Count);
+        Assert.Contains(result.Forecasts, f => locationEntity.Forecasts.Any(e => e.Date == f.Date && e.TemperatureC == f.TemperatureC.Value && e.Summary == f.Summary));
     }
 
     [Fact]
