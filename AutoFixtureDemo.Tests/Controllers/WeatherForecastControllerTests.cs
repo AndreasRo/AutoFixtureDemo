@@ -1,8 +1,9 @@
 using Xunit;
 using Moq;
-using Microsoft.Extensions.Logging;
 using AutoFixtureDemo.Controllers;
 using AutoFixtureDemo.Services;
+using AutoFixtureDemo.DomainObjects;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 
 public class WeatherForecastControllerTests
@@ -11,20 +12,20 @@ public class WeatherForecastControllerTests
     public void Get_ReturnsForecastsFromService()
     {
         // Arrange
-        var mockLogger = new Mock<ILogger<WeatherForecastController>>();
-        var mockService = new Mock<WeatherForecastService>();
+        var mockService = new Mock<IWeatherForecastService>();
         var expectedForecasts = new List<WeatherForecast>
         {
-            new WeatherForecast { Date = DateOnly.FromDateTime(System.DateTime.Now), TemperatureC = 20, Summary = "Mild" }
+            new WeatherForecast { Date = DateOnly.FromDateTime(System.DateTime.Now), TemperatureC = new Celsius(20), Summary = WeatherSummary.Mild }
         };
-        mockService.Setup(s => s.GetForecasts()).Returns(expectedForecasts);
+        mockService.Setup(s => s.GetForecasts(It.IsAny<string?>())).Returns(expectedForecasts);
 
-        var controller = new WeatherForecastController(mockLogger.Object, mockService.Object);
+        var controller = new WeatherForecastController(mockService.Object);
 
         // Act
-        var result = controller.Get();
+        var result = controller.Get("loc");
 
         // Assert
-        Assert.Equal(expectedForecasts, result);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(expectedForecasts, ok.Value);
     }
 }

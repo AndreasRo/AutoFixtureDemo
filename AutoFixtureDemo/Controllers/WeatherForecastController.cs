@@ -1,3 +1,5 @@
+using AutoFixtureDemo.DomainObjects;
+using System.Collections.Generic;
 using AutoFixtureDemo.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,21 +9,22 @@ namespace AutoFixtureDemo.Controllers
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase
     {
-        private readonly ILogger<WeatherForecastController> _logger;
         private readonly IWeatherForecastService _weatherForecastService;
 
         public WeatherForecastController(
-            ILogger<WeatherForecastController> logger,
             IWeatherForecastService weatherForecastService)
         {
-            _logger = logger;
             _weatherForecastService = weatherForecastService;
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
-        public IEnumerable<WeatherForecast> Get()
+        public ActionResult<IEnumerable<WeatherForecast>> Get([FromQuery] string? location = null)
         {
-            return _weatherForecastService.GetForecasts();
+            if (location == null)
+            {
+                return BadRequest("Location parameter is required.");
+            }
+            return Ok(_weatherForecastService.GetForecastsForLocation(location));
         }
     }
 }

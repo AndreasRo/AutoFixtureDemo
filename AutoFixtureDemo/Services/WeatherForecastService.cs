@@ -4,24 +4,38 @@ namespace AutoFixtureDemo.Services
 {
     public class WeatherForecastService : IWeatherForecastService
     {
-        private static readonly string[] Summaries = new[]
+        private static readonly WeatherSummary[] Summaries = new[]
         {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+            WeatherSummary.Freezing,
+            WeatherSummary.Bracing,
+            WeatherSummary.Chilly,
+            WeatherSummary.Cool,
+            WeatherSummary.Mild,
+            WeatherSummary.Warm,
+            WeatherSummary.Balmy,
+            WeatherSummary.Hot,
+            WeatherSummary.Sweltering,
+            WeatherSummary.Scorching
         };
 
-        public IEnumerable<WeatherForecast> GetForecasts()
+        public Location GetForecastsForLocation(string? locationName)
         {
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            return new Location
             {
-                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-            })
-            .ToArray();
+                City = locationName ?? "Unknown",
+                Country = "Unknown",
+                Forecasts = Enumerable.Range(1, 5).Select(index => new WeatherForecast
+                {
+                    Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                    TemperatureC = new Celsius(Random.Shared.Next(-20, 55)),
+                    Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+                }).ToList()
+            };
         }
     }
+    
     public interface IWeatherForecastService
     {
-        IEnumerable<WeatherForecast> GetForecasts();
+        Location GetForecastsForLocation(string? locationName);
     }
 }

@@ -4,10 +4,10 @@ namespace AutoFixtureDemo.DomainObjects
     {
         public DateOnly Date { get; set; }
 
-        public int TemperatureC { get; set; }
+        public Celsius TemperatureC { get; set; }
 
-        public int TemperatureF => 32 + (int)(TemperatureC * 9 / 5);
+        public Fahrenheit TemperatureF  => (Fahrenheit)TemperatureC;
 
-        public string? Summary { get; set; }
+        public WeatherSummary Summary { get; set; }
     }
 }
