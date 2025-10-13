@@ -34,15 +34,23 @@ public class WeatherForecastControllerTests
             }
         };
 
-        _mockService.Setup(s => s.GetForecastsForLocation(It.IsAny<string?>())).Returns(location);
+    _mockService.Setup(s => s.GetForecastsForLocation(It.IsAny<string?>())).Returns(location);
 
-        var controller = new WeatherForecastController(_mockService.Object);
+    // create mapper
+    var mapperConfig = new AutoMapper.MapperConfiguration(cfg => cfg.AddProfile<AutoFixtureDemo.Mapping.MappingProfile>());
+    var mapper = mapperConfig.CreateMapper();
 
-        // Act
-        var result = controller.Get("some-location");
+    var controller = new WeatherForecastController(_mockService.Object, mapper);
 
-        // Assert
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        Assert.Equal(location, ok.Value);
+    // Act
+    var result = controller.Get("some-location");
+
+    // Assert
+    var ok = Assert.IsType<OkObjectResult>(result.Result);
+    var dto = Assert.IsType<AutoFixtureDemo.Controllers.DTO.LocationDto>(ok.Value);
+
+    Assert.Equal(location.City, dto.City);
+    Assert.Equal(location.Country, dto.Country);
+    Assert.Equal(location.Forecasts.Count, dto.Forecasts.Count);
     }
 }

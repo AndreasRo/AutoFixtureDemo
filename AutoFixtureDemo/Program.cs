@@ -8,6 +8,8 @@ builder.Services.AddSingleton<IWeatherForecastService, WeatherForecastService>()
 // Add Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(AutoFixtureDemo.Mapping.MappingProfile));
 
 var app = builder.Build();
 
