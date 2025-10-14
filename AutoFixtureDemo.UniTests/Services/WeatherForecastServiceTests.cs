@@ -22,17 +22,14 @@ public class WeatherForecastServiceTests
 
         _service = new WeatherForecastService(_mockRepo.Object, mapper);
     }
-    
-    [Fact]
-    public void GetForecastsForLocation_ReturnsMappedLocation_WhenRepositoryReturnsEntity()
+
+    [Theory]
+    [EntityInlineData("TestCity")]
+    public void GetForecastsForLocation_ReturnsMappedLocation_WhenRepositoryReturnsEntity(string cityName, LocationEntity locationEntity)
     {
         // Arrange
-        var fixture = new Fixture();
-        fixture.Customize(new EntityCustomization());
-
-        var locationEntity = fixture.Create<LocationEntity>();
         locationEntity.Forecasts.ForEach(f => f.Location = locationEntity);
-
+        locationEntity.City = cityName;
         _mockRepo.Setup(r => r.GetLocationByName(It.IsAny<string>())).Returns(locationEntity);
 
         // Act
@@ -40,7 +37,7 @@ public class WeatherForecastServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(locationEntity.City, result.City.Value);
+        Assert.Equal("TestCity", result.City.Value);
         Assert.Equal(locationEntity.Country, result.Country.Value);
         Assert.Equal(locationEntity.Forecasts.Count, result.Forecasts.Count);
         Assert.Contains(result.Forecasts, f => locationEntity.Forecasts.Any(e => e.Date == f.Date && e.TemperatureC == f.TemperatureC.Value && e.Summary == f.Summary));

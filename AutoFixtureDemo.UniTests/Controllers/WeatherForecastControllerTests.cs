@@ -13,28 +13,26 @@ namespace AutoFixtureDemo.UnitTests.Controllers;
 public class WeatherForecastControllerTests
 {
     private readonly Mock<IWeatherForecastService> _mockService = new();
+    private readonly WeatherForecastController _controller;
 
-    private static DateOnly Today() => DateOnly.FromDateTime(DateTime.UtcNow);
-
-    [Fact]
-    public void Get_ReturnsForecastsFromService()
+    public WeatherForecastControllerTests()
     {
-        // Arrange
-        var fixture = new Fixture();
-        fixture.Customize(new DefaultTestCustomization());
-
-        var location = fixture.Create<Location>();
-        
-        _mockService.Setup(s => s.GetForecastsForLocation(location.City.Value)).Returns(location);
-
-        // create mapper
+        _mockService = new Mock<IWeatherForecastService>();
         var mapperConfig = new AutoMapper.MapperConfiguration(cfg => cfg.AddProfile<Mapping.MappingProfile>(), new LoggerFactory());
         var mapper = mapperConfig.CreateMapper();
 
-        var controller = new WeatherForecastController(_mockService.Object, mapper);
+        _controller = new WeatherForecastController(_mockService.Object, mapper);
+    }
+
+    [Theory]
+    [DomainPrimitivesAutoData]
+    public void Get_ReturnsForecastsFromService(Location location)
+    {
+        // Arrange
+        _mockService.Setup(s => s.GetForecastsForLocation(location.City.Value)).Returns(location);
 
         // Act
-        var result = controller.Get(location.City.Value);
+        var result = _controller.Get(location.City.Value);
 
         // Assert
         var ok = Assert.IsType<OkObjectResult>(result.Result);
