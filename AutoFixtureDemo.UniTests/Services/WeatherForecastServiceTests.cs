@@ -4,9 +4,10 @@ using AutoFixtureDemo.Database;
 using AutoFixtureDemo.Database.Entities;
 using AutoFixtureDemo.Mapping;
 using AutoMapper;
-using AutoFixture;
+using AutoFixtureDemo.DomainObjects;
 using AutoFixtureDemo.UnitTests.AutoFixtureCustomizations;
 using Microsoft.Extensions.Logging;
+using Xunit.Abstractions;
 
 namespace AutoFixtureDemo.UnitTests.Services;
 
@@ -14,14 +15,17 @@ public class WeatherForecastServiceTests
 {
     private readonly Mock<ILocationRepository> _mockRepo = new();
     private readonly WeatherForecastService _service;
+    private readonly ITestOutputHelper _output;
 
-    public WeatherForecastServiceTests()
+    public WeatherForecastServiceTests(ITestOutputHelper output)
     {
         var mapperConfig = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>(), new LoggerFactory());
         var mapper = mapperConfig.CreateMapper();
 
         _service = new WeatherForecastService(_mockRepo.Object, mapper);
+        _output = output;
     }
+
 
     [Theory]
     [EntityInlineData("TestCity")]
@@ -54,5 +58,15 @@ public class WeatherForecastServiceTests
 
         // Assert
         Assert.Null(result);
+    }
+
+    [Theory]
+    [AnyFixturesAutoData([typeof(DomainObjectsCustomization)])]
+    public void Pitfalls(Location locationEntity)
+    {
+        _output.WriteLine($"Location: {locationEntity.City}, {locationEntity.Country}, {locationEntity.Forecasts.Count} forecasts");
+        Assert.Equal("MyCity", locationEntity.City.Value);
+        Assert.Equal("MyCountry", locationEntity.Country.Value);
+        Assert.All(locationEntity.Forecasts, f => Assert.Equal(WeatherSummary.Mild, f.Summary));
     }
 }

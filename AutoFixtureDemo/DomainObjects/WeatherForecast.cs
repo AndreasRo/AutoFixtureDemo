@@ -1,10 +1,10 @@
 namespace AutoFixtureDemo.DomainObjects
 {
-    public class WeatherForecast(DateOnly date, Celsius temperatureC, WeatherSummary summary)
+    public class WeatherForecast
     {
-        public DateOnly Date { get; private set; } = date;
-        public Celsius TemperatureC { get; private set; } = temperatureC;
-        public WeatherSummary Summary { get; private set; } = summary;
+        public DateOnly Date { get;  set; }
+        public Celsius TemperatureC { get; set; }
+        public WeatherSummary Summary { get; set; } 
         public Fahrenheit TemperatureF  => (Fahrenheit)TemperatureC;
     }
 }

@@ -1,4 +1,3 @@
-using AutoFixture;
 using AutoFixtureDemo.Controllers;
 using AutoFixtureDemo.Controllers.DTO;
 using AutoFixtureDemo.DomainObjects;
@@ -12,7 +11,7 @@ namespace AutoFixtureDemo.UnitTests.Controllers;
 
 public class WeatherForecastControllerTests
 {
-    private readonly Mock<IWeatherForecastService> _mockService = new();
+    private readonly Mock<IWeatherForecastService> _mockService;
     private readonly WeatherForecastController _controller;
 
     public WeatherForecastControllerTests()
