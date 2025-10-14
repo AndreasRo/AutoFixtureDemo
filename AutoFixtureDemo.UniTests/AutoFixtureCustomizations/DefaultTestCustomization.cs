@@ -3,7 +3,7 @@ using AutoFixture.Xunit2;
 using AutoFixtureDemo.Database.Entities;
 using AutoFixtureDemo.DomainObjects;
 
-namespace AutoFixtureDemo.UnitTests.AutoFixtureCustomizations
+namespace AutoFixtureDemo.UnitTests.AutoFixtureCustomizations;
 
 public class DefaultTestCustomization : ICustomization
 {
@@ -45,29 +45,42 @@ public class EntityCustomization : ICustomization
     }
 }
 
-public sealed class EntityAutoDataAttribute : AutoDataAttribute
+public sealed class EntityAutoDataAttribute() : AutoDataAttribute(() =>
 {
-    public EntityAutoDataAttribute()
-        : base(() =>
-        {
-            var fixture = new Fixture()
-                .Customize(new EntityCustomization());
-            return fixture;
-        })
-    { }
-}
+    var fixture = new Fixture()
+        .Customize(new EntityCustomization());
+    return fixture;
+})
+{ }
 
-public sealed class DomainPrimitivesAutoDataAttribute : AutoDataAttribute
+public sealed class DomainPrimitivesAutoDataAttribute() : AutoDataAttribute(() =>
 {
-    public DomainPrimitivesAutoDataAttribute()
-        : base(() =>
-        {
             var fixture = new Fixture()
                 .Customize(new DefaultTestCustomization());
             return fixture;
-        })
-    { }
+        }){}
+
+public sealed class AnyFixturesAutoDataAttribute(Type[] customizationTypes) : AutoDataAttribute(() =>
+         {
+             var fixture = new Fixture();
+             foreach (var customizationType in customizationTypes)
+             {
+                 if (Activator.CreateInstance(customizationType) is ICustomization customization)
+                 {
+                     fixture.Customize(customization);
+                 }
+                 else
+                 {
+                     throw new ArgumentException($"Type {customizationType.FullName} does not implement ICustomization");
+                 }
+             }
+             return fixture;
+         })
+{
 }
 
 public sealed class EntityInlineDataAttribute(params object[] values)
     : InlineAutoDataAttribute(new EntityAutoDataAttribute(), values);
+
+public sealed class AnyFixturesInlineDataAttribute(Type[] customizationTypes, params object[] values)
+    : InlineAutoDataAttribute(new AnyFixturesAutoDataAttribute(customizationTypes), values);
