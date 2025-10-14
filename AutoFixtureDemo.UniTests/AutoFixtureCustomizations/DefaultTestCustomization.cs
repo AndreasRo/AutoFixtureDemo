@@ -1,4 +1,5 @@
 using AutoFixture;
+using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
 using AutoFixtureDemo.Database.Entities;
 using AutoFixtureDemo.DomainObjects;
@@ -14,17 +15,34 @@ public class DefaultTestCustomization : ICustomization
             fixture.Behaviors.Remove(b);
         fixture.Behaviors.Add(new OmitOnRecursionBehavior());
 
-        // Register a valid DateOnly generator (within next year)
-        fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
+        fixture.Customizations.Add(new BogusBehavior());
 
-        // Register alphanumeric string generator for City/Country so Text validation passes
-        fixture.Register(() => new Text($"S{Guid.NewGuid():N}"));
         fixture.Register(() => new Celsius(Random.Shared.Next(Celsius.AbsoluteZero, Celsius.MaxValue + 1)));
 
         // Ensure WeatherForecastEntity doesn't try to populate the Location back-reference
         fixture.Customize<WeatherForecastEntity>(c => c.Without(w => w.Location));
     }
 }
+
+internal class BogusBehavior : ISpecimenBuilder
+{
+    public object Create(object request, ISpecimenContext context)
+    {
+        if (request is Type type)
+        {
+            if (type == typeof(Text))
+            {
+                return new Text($"Text {Guid.NewGuid():N}");
+            }
+            if (type == typeof(DateOnly))
+            {
+                return DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365)));
+            }
+        }
+        return new NoSpecimen();
+    }
+}
+
 
 public class EntityCustomization : ICustomization
 {
