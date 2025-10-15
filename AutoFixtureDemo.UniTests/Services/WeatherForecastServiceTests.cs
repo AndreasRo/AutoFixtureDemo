@@ -4,6 +4,7 @@ using AutoFixtureDemo.Mapping;
 using AutoFixtureDemo.Services;
 using AutoMapper;
 using AutoFixture;
+using AutoFixtureDemo.DomainObjects;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -27,7 +28,9 @@ public class WeatherForecastServiceTests
     {
         // Arrange
         var fixture = new Fixture();
-        
+        fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
+        fixture.Register(() => new Text($"Text {Guid.NewGuid():N}"));
+
         var forecasts = fixture.Build<WeatherForecastEntity>()
             .Without(f => f.Location)
             .CreateMany(5)

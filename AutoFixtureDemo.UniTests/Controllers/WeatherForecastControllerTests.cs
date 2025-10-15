@@ -20,11 +20,13 @@ public class WeatherForecastControllerTests
     {
         // Arrange
         var fixture = new Fixture();
+        fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
+        fixture.Register(() => new Text($"Text {Guid.NewGuid():N}"));
 
         var forecasts = fixture.Build<WeatherForecast>()
             .CreateMany(5)
             .ToList();
-
+        
         var location = fixture.Build<Location>()
             .With(l => l.Forecasts, forecasts)
             .Create();
