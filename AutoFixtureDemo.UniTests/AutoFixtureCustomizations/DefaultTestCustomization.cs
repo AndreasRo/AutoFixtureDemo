@@ -1,8 +1,17 @@
 using AutoFixture;
+using AutoFixture.AutoMoq;
 using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
+using AutoFixtureDemo.Controllers;
+using AutoFixtureDemo.Database;
 using AutoFixtureDemo.Database.Entities;
 using AutoFixtureDemo.DomainObjects;
+using AutoFixtureDemo.Mapping;
+using AutoFixtureDemo.Services;
+using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace AutoFixtureDemo.UnitTests.AutoFixtureCustomizations;
 
@@ -100,20 +109,37 @@ public class DomainObjectsCustomization : ICustomization
     }
 }
 
-public sealed class EntityAutoDataAttribute() : AutoDataAttribute(() =>
+public class ServiceSetupCustomization : ICustomization
 {
-    var fixture = new Fixture()
-        .Customize(new EntityCustomization());
-    return fixture;
-})
+    public void Customize(IFixture fixture)
+    {
+        fixture.Customize(new AutoMoqCustomization());
+        fixture.Register(() =>
+        {
+            var mapperConfig = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>(), new LoggerFactory());
+            return mapperConfig.CreateMapper();
+        });
+        fixture.Freeze<Mock<ILocationRepository>>();
+        fixture.Freeze<Mock<IWeatherForecastService>>();
+        fixture.Customize<WeatherForecastController>(c => c
+                .FromFactory(() =>
+                {
+                    var forecastServiceMock = fixture.Create<Mock<IWeatherForecastService>>();
+                    var mapper = fixture.Create<IMapper>();
+                    return new WeatherForecastController(forecastServiceMock.Object, mapper);
+                })
+                .With(x => x.ControllerContext, new ControllerContext())
+        );
+    }
+}
+
+public sealed class EntityAutoDataAttribute() : AutoDataAttribute(() => new Fixture()
+    .Customize(new EntityCustomization()))
 { }
 
-public sealed class DomainPrimitivesAutoDataAttribute() : AutoDataAttribute(() =>
-{
-            var fixture = new Fixture()
-                .Customize(new DefaultTestCustomization());
-            return fixture;
-        }){}
+public sealed class DomainPrimitivesAutoDataAttribute() : AutoDataAttribute(() => new Fixture()
+    .Customize(new DefaultTestCustomization())
+    .Customize(new ServiceSetupCustomization())){}
 
 public sealed class AnyFixturesAutoDataAttribute(Type[] customizationTypes) : AutoDataAttribute(() =>
          {
