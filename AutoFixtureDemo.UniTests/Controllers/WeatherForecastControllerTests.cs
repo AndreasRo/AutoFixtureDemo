@@ -1,19 +1,15 @@
-using Xunit;
-using Moq;
 using AutoFixtureDemo.Controllers;
-using AutoFixtureDemo.Services;
 using AutoFixtureDemo.DomainObjects;
+using AutoFixtureDemo.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using Moq;
+
+namespace AutoFixtureDemo.UnitTests.Controllers;
 
 public class WeatherForecastControllerTests
 {
-    private readonly Mock<IWeatherForecastService> _mockService;
-
-    public WeatherForecastControllerTests()
-    {
-        _mockService = new Mock<IWeatherForecastService>();
-    }
+    private readonly Mock<IWeatherForecastService> _mockService = new();
 
     [Fact]
     public void Get_ReturnsForecastsFromService()
@@ -37,7 +33,7 @@ public class WeatherForecastControllerTests
     _mockService.Setup(s => s.GetForecastsForLocation(It.IsAny<string?>())).Returns(location);
 
     // create mapper
-    var mapperConfig = new AutoMapper.MapperConfiguration(cfg => cfg.AddProfile<AutoFixtureDemo.Mapping.MappingProfile>());
+    var mapperConfig = new AutoMapper.MapperConfiguration(cfg => cfg.AddProfile<Mapping.MappingProfile>(), new LoggerFactory());
     var mapper = mapperConfig.CreateMapper();
 
     var controller = new WeatherForecastController(_mockService.Object, mapper);

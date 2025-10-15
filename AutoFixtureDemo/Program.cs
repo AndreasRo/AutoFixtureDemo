@@ -1,6 +1,5 @@
 using AutoFixtureDemo.Database;
 using AutoFixtureDemo.Services;
-using AutoMapper;
 using AutoFixtureDemo.Mapping;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -1,23 +1,25 @@
-using Xunit;
-using Moq;
-using AutoFixtureDemo.Services;
 using AutoFixtureDemo.Database;
 using AutoFixtureDemo.Database.Entities;
-using AutoMapper;
-using AutoFixtureDemo.Mapping;
 using AutoFixtureDemo.DomainObjects;
+using AutoFixtureDemo.Mapping;
+using AutoFixtureDemo.Services;
+using AutoMapper;
+using Microsoft.Extensions.Logging;
+using Moq;
+
+namespace AutoFixtureDemo.UnitTests.Services;
 
 public class WeatherForecastServiceTests
 {
-    private readonly Mock<ILocationRepository> mockRepo = new();
-    private readonly WeatherForecastService service;
+    private readonly Mock<ILocationRepository> _mockRepo = new();
+    private readonly WeatherForecastService _service;
 
     public WeatherForecastServiceTests()
     {
-        var mapperConfig = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
+        var mapperConfig = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>(), new LoggerFactory());
         var mapper = mapperConfig.CreateMapper();
 
-        service = new WeatherForecastService(mockRepo.Object, mapper);
+        _service = new WeatherForecastService(_mockRepo.Object, mapper);
     }
     
     [Fact]
@@ -37,14 +39,14 @@ public class WeatherForecastServiceTests
             })]
         };
 
-        mockRepo.Setup(r => r.GetLocationByName(It.IsAny<string>())).Returns(entity);
+        _mockRepo.Setup(r => r.GetLocationByName(It.IsAny<string>())).Returns(entity);
 
         // Act
-        var result = service.GetForecastsForLocation("TestCity");
+        var result = _service.GetForecastsForLocation("TestCity");
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("TestCity", result!.City.Value);
+        Assert.Equal("TestCity", result.City.Value);
         Assert.Equal("TestCountry", result.Country.Value);
         Assert.Equal(entity.Forecasts.Count, result.Forecasts.Count);
         Assert.Contains(result.Forecasts, f => entity.Forecasts.Any(e => e.Date == f.Date && e.TemperatureC == f.TemperatureC.Value && e.Summary == f.Summary));
@@ -54,10 +56,10 @@ public class WeatherForecastServiceTests
     public void GetForecastsForLocation_ReturnsNull_WhenRepositoryReturnsNull()
     {
         // Arrange
-        mockRepo.Setup(r => r.GetLocationByName(It.IsAny<string>())).Returns<LocationEntity?>(null!);
+        _mockRepo.Setup(r => r.GetLocationByName(It.IsAny<string>())).Returns<LocationEntity?>(null!);
 
         // Act
-        var result = service.GetForecastsForLocation("UnknownCity");
+        var result = _service.GetForecastsForLocation("UnknownCity");
 
         // Assert
         Assert.Null(result);

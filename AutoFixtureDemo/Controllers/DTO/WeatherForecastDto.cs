@@ -1,5 +1,3 @@
-using AutoFixtureDemo.DomainObjects;
-
 namespace AutoFixtureDemo.Controllers.DTO
 {
     public class WeatherForecastDto

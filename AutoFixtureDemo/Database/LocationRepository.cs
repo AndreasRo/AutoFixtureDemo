@@ -18,12 +18,12 @@ public class LocationRepository : ILocationRepository
         _locations.Add(location);
     }
 
-    public LocationEntity? GetLocationByName(string cityName)
+    public LocationEntity GetLocationByName(string cityName)
     {
         return _locations.FirstOrDefault(loc => loc.City.Equals(cityName, StringComparison.OrdinalIgnoreCase)) ?? GetDummy(cityName);
     }
 
-    private static LocationEntity GetDummy(string locationName)
+    private static LocationEntity GetDummy(string? locationName)
     {
         var summaries = Enum.GetValues<WeatherSummary>();
         return new LocationEntity

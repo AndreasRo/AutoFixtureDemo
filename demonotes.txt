@@ -1,0 +1,177 @@
+BRANCH 1:
+*********
+
+
+WeatherForecastServiceTests:
+----------------------------
+Fiks DateOnly:
+fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
+
+Autogenerer magic strings:
+Ta vekk city og country -> Det feiler, fordi autogenerert tekst inneholder spesialtegn.
+
+fixture.Register(() => new Text($"Text {Guid.NewGuid():N}"));
+
+.With(f => f.City, () => fixture.Create<Text>().Value)
+.With(f => f.Country, () => fixture.Create<Text>().Value)
+
+Legg til makstemp for Celcius.
+
+
+WeatherForecastControllerTests:
+--------------------------------
+
+fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
+fixture.Register(() => new Text($"Text {Guid.NewGuid():N}"));
+
+BRANCH 2:
+*********
+
+Opprett egen customizaton. Flytt oppsett inn dit:
+
+public class DefaultTestCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        // Replace throwing recursion behavior with omission to avoid circular graph exceptions
+        foreach (var b in fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToArray())
+            fixture.Behaviors.Remove(b);
+        fixture.Behaviors.Add(new OmitOnRecursionBehavior());
+
+        // Register a valid DateOnly generator (within next year)
+        fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
+
+        // Register alphanumeric string generator for City/Country so Text validation passes
+        fixture.Register(() => new Text($"S{Guid.NewGuid():N}"));
+        fixture.Register(() => new Celsius(Random.Shared.Next(Celsius.AbsoluteZero, Celsius.MaxValue + 1)));
+
+        // Ensure WeatherForecastEntity doesn't try to populate the Location back-reference
+        fixture.Customize<WeatherForecastEntity>(c => c.Without(w => w.Location));
+    }
+}
+
+Reduser oppsettet i testene.
+
+
+
+Kan så opprette en "ytre" customization. En for DTO, en for Domain Objects og en for Entity:
+
+public class EntityCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        fixture.Customize(new DefaultTestCustomization());
+
+        fixture.Customize<WeatherForecastEntity>(c => c
+            .Without(w => w.Location)
+            .With(f => f.TemperatureC, () => fixture.Create<Celsius>().Value)
+        );
+
+        fixture.Customize<LocationEntity>(c => c
+                .With(l => l.Forecasts, () => [.. fixture.CreateMany<WeatherForecastEntity>(5)])
+                .With(f => f.City, () => fixture.Create<Text>().Value)
+                .With(f => f.Country, () => fixture.Create<Text>().Value)
+        );
+    }
+}
+
+BRANCH 3:
+*********
+
+Opprett autodata attributt:
+public sealed class EntityAutoDataAttribute : AutoDataAttribute
+{
+    public EntityAutoDataAttribute()
+        : base(() =>
+        {
+            var fixture = new Fixture()
+                .Customize(new EntityCustomization());
+            return fixture;
+        })
+    { }
+}
+
+Og en for domain primitives: 
+
+public sealed class DomainPrimitivesAutoDataAttribute : AutoDataAttribute
+{
+    public DomainPrimitivesAutoDataAttribute()
+        : base(() =>
+        {
+            var fixture = new Fixture()
+                .Customize(new DefaultTestCustomization());
+            return fixture;
+        })
+    { }
+}
+
+Kan deretter også evt. lage en som tar constructor params.
+
+public sealed class EntityInlineDataAttribute(params object[] values) 
+    : InlineAutoDataAttribute(new EntityAutoDataAttribute(), values);
+    
+Tar alle slags customizations:
+
+public sealed class AnyFixturesAutoDataAttribute(Type[] customizationTypes) : AutoDataAttribute(() =>
+         {
+             var fixture = new Fixture();
+             foreach (var customizationType in customizationTypes)
+             {
+                 if (Activator.CreateInstance(customizationType) is ICustomization customization)
+                 {
+                     fixture.Customize(customization);
+                 }
+                 else
+                 {
+                     throw new ArgumentException($"Type {customizationType.FullName} does not implement ICustomization");
+                 }
+             }
+             return fixture;
+         })
+{
+}
+
+Kan også lage SpecimenBuilders:
+
+internal class BogusBehavior : ISpecimenBuilder
+{
+    public object Create(object request, ISpecimenContext context)
+    {
+        if (request is Type type)
+        {
+            if (type == typeof(Text))
+            {
+                return new Text($"Text {Guid.NewGuid():N}");
+            }
+            if (type == typeof(DateOnly))
+            {
+                return DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365)));
+            }
+        }
+        return new NoSpecimen();
+    }
+}
+
+-> fixture.Customizations.Add(new BogusBehavior());
+
+Disse egner seg når man ønsker å gjøre tilpasninger på tvers av typer. F.eks. håndtere brukerdefinerte attributter.
+
+
+BRANCH 4:
+*********
+
+Pitfalls. 
+
+Registrere en customize med WeatherSummary. Får ikke forventet resultat. Register funker.
+
+fixture.Customize<Location>(c => c.FromFactory(() => new("MyCity", "MyCountry", [.. fixture.CreateMany<WeatherForecast>(5)]))/*.Without(x => x.Forecasts).Do(x => x.Initialize())*/);
+fixture.Register(() => new Location("MyCity", "MyCountry", [.. fixture.CreateMany<WeatherForecast>(5)]));
+
+Med Customize settes alle public setters i etterkant, kan overstyre ctor-verdiene.
+Opprette Enums med customize blir ignorert pga. rekkefølge.
+Enums håndteres som ints out of the box.
+
+Register funker bedre men er mer begrenset.
+
+Behaviours er mere "global", sier noe om hvordan genereringen skjer. F.eks. antall elementer i en liste, 
+hvordan rekursive elementer håndteres.
