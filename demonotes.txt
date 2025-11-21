@@ -1,3 +1,29 @@
+MASTER:
+*******
+
+WeatherForecastServiceTests:
+----------------------------
+
+<PackageReference Include="AutoFixture.Xunit2" Version="4.18.1" />
+
+var fixture = new Fixture();
+fixture.Register(() => DateOnly.FromDateTime(DateTime.Now.AddDays(Random.Shared.Next(0, 365))));
+fixture.Register(() => new Text($"Text {Guid.NewGuid():N}"));
+
+var forecasts = fixture.Build<WeatherForecastEntity>()
+    .Without(f => f.Location)
+    .CreateMany(5)
+    .ToList();
+
+var locationEntity = fixture.Build<LocationEntity>()
+    .With(l => l.City, "TestCity")
+    .With(l => l.Country, "TestCountry")
+    .With(l => l.Forecasts, forecasts)
+    .Create();
+
+forecasts.ForEach(f => f.Location = locationEntity);
+
+
 BRANCH 1:
 *********
 
@@ -54,7 +80,7 @@ Reduser oppsettet i testene.
 
 
 
-Kan så opprette en "ytre" customization. En for DTO, en for Domain Objects og en for Entity:
+Kan s  opprette en "ytre" customization. En for DTO, en for Domain Objects og en for Entity:
 
 public class EntityCustomization : ICustomization
 {
@@ -79,33 +105,17 @@ BRANCH 3:
 *********
 
 Opprett autodata attributt:
-public sealed class EntityAutoDataAttribute : AutoDataAttribute
-{
-    public EntityAutoDataAttribute()
-        : base(() =>
-        {
-            var fixture = new Fixture()
-                .Customize(new EntityCustomization());
-            return fixture;
-        })
-    { }
-}
+public sealed class EntityAutoDataAttribute() : AutoDataAttribute(() => new Fixture()
+    .Customize(new EntityCustomization()))
+{ }
 
 Og en for domain primitives: 
 
-public sealed class DomainPrimitivesAutoDataAttribute : AutoDataAttribute
-{
-    public DomainPrimitivesAutoDataAttribute()
-        : base(() =>
-        {
-            var fixture = new Fixture()
-                .Customize(new DefaultTestCustomization());
-            return fixture;
-        })
-    { }
-}
+public sealed class DomainPrimitivesAutoDataAttribute() : AutoDataAttribute(() => new Fixture()
+    .Customize(new DefaultTestCustomization()))
+{ }
 
-Kan deretter også evt. lage en som tar constructor params.
+Kan deretter ogs  evt. lage en som tar constructor params.
 
 public sealed class EntityInlineDataAttribute(params object[] values) 
     : InlineAutoDataAttribute(new EntityAutoDataAttribute(), values);
@@ -131,7 +141,10 @@ public sealed class AnyFixturesAutoDataAttribute(Type[] customizationTypes) : Au
 {
 }
 
-Kan også lage SpecimenBuilders:
+public sealed class AnyFixturesInlineDataAttribute(Type[] customizationTypes, params object[] values)
+    : InlineAutoDataAttribute(new AnyFixturesAutoDataAttribute(customizationTypes), values);
+
+Kan ogs  lage SpecimenBuilders:
 
 internal class BogusBehavior : ISpecimenBuilder
 {
@@ -154,7 +167,30 @@ internal class BogusBehavior : ISpecimenBuilder
 
 -> fixture.Customizations.Add(new BogusBehavior());
 
-Disse egner seg når man ønsker å gjøre tilpasninger på tvers av typer. F.eks. håndtere brukerdefinerte attributter.
+
+public class MyValueHereStringSpecimenBuilder : ISpecimenBuilder
+{
+    public object Create(object request, ISpecimenContext context)
+    {
+        // We only care about properties
+        if (request is not PropertyInfo propertyInfo)
+            return new NoSpecimen();
+
+        // Only string properties
+        if (propertyInfo.PropertyType != typeof(string))
+            return new NoSpecimen();
+
+        // Only properties decorated with [MyValueHere]
+        var hasAttribute = propertyInfo.GetCustomAttribute<MyValueHereAttribute>() != null;
+        if (!hasAttribute)
+            return new NoSpecimen();
+
+        // This is our special case
+        return "IAmHere";
+    }
+}
+
+Disse egner seg n r man  nsker   gj re tilpasninger p  tvers av typer. F.eks. h ndtere brukerdefinerte attributter.
 
 
 BRANCH 4:
@@ -162,16 +198,64 @@ BRANCH 4:
 
 Pitfalls. 
 
-Registrere en customize med WeatherSummary. Får ikke forventet resultat. Register funker.
+Registrere en customize med WeatherSummary. F r ikke forventet resultat. Register funker.
 
 fixture.Customize<Location>(c => c.FromFactory(() => new("MyCity", "MyCountry", [.. fixture.CreateMany<WeatherForecast>(5)]))/*.Without(x => x.Forecasts).Do(x => x.Initialize())*/);
 fixture.Register(() => new Location("MyCity", "MyCountry", [.. fixture.CreateMany<WeatherForecast>(5)]));
 
 Med Customize settes alle public setters i etterkant, kan overstyre ctor-verdiene.
-Opprette Enums med customize blir ignorert pga. rekkefølge.
-Enums håndteres som ints out of the box.
+Opprette Enums med customize blir ignorert pga. rekkef lge.
+Enums h ndteres som ints out of the box.
 
 Register funker bedre men er mer begrenset.
 
 Behaviours er mere "global", sier noe om hvordan genereringen skjer. F.eks. antall elementer i en liste, 
-hvordan rekursive elementer håndteres.
+hvordan rekursive elementer h ndteres.
+
+
+Inline services
+---------------
+
+public class ServiceSetupCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        fixture.Customize(new AutoMoqCustomization());
+        fixture.Register(() =>
+        {
+            var mapperConfig = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>(), new LoggerFactory());
+            return mapperConfig.CreateMapper();
+        });
+        fixture.Freeze<Mock<ILocationRepository>>();
+        fixture.Freeze<Mock<IWeatherForecastService>>();
+        fixture.Customize<WeatherForecastController>(c => c
+                .FromFactory(() =>
+                {
+                    var forecastServiceMock = fixture.Create<Mock<IWeatherForecastService>>();
+                    var mapper = fixture.Create<IMapper>();
+                    return new WeatherForecastController(forecastServiceMock.Object, mapper);
+                })
+                .With(x => x.ControllerContext, new ControllerContext())
+        );
+    }
+}
+
+    [Theory]
+    [DomainPrimitivesAutoData]
+    public void Get_ReturnsForecastsFromService(Location location, Mock<IWeatherForecastService> mockService, WeatherForecastController controller)
+    {
+        // Arrange
+        mockService.Setup(s => s.GetForecastsForLocation(location.City.Value)).Returns(location);
+
+        // Act
+        var result = controller.Get(location.City.Value);
+
+        // Assert
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<AutoFixtureDemo.Controllers.DTO.LocationDto>(ok.Value);
+
+        Assert.Equal(location.City.Value, dto.City);
+        Assert.Equal(location.Country.Value, dto.Country);
+        Assert.Equal(location.Forecasts.Count, dto.Forecasts.Count);
+    }
+
